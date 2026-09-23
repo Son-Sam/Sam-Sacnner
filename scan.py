@@ -8,9 +8,9 @@ from datetime import datetime
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-RATIO_THRESHOLD = 2.0
-MIN_VOLUME_USD = 0
-MIN_MARKET_CAP_USD = 0
+RATIO_THRESHOLD = 0.5
+MIN_VOLUME_USD = 5000000
+MIN_MARKET_CAP_USD = 50000000
 TOP_N_COINS = 1000
 STATE_FILE = "previous_coins.json"
 # ===================================
@@ -114,9 +114,9 @@ def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, rank, is_new=Fals
     galaxy_str = f"{galaxy:.0f}" if galaxy is not None else "N/A"
     rank_str = f"#{rank:.0f}" if rank is not None else ""
     return (
-        f"{tag}[{name}]({link}) {rank_str}\n"
-        f"نسبت: {ratio:.2f} | Vol: ${format_number(vol)} | MCap: ${format_number(mcap)}\n"
-        f"Tech Rating: {tech_label} | AltRank: {altrank_str} | Galaxy Score: {galaxy_str}"
+        f"{tag}[{name}]({link}) {rank_str} vol/mktcap: {ratio:.2f}\n"
+        f"Vol: ${format_number(vol)} | MCap: ${format_number(mcap)}\n"
+        f"T Rating: {tech_label} | AltRank: {altrank_str} | G Score: {galaxy_str}"
     )
 
 
