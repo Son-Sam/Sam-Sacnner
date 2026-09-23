@@ -8,15 +8,15 @@ from datetime import datetime
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-RATIO_THRESHOLD = 1.0
-MIN_VOLUME_USD = 5000000
-MIN_MARKET_CAP_USD = 50000000
+RATIO_THRESHOLD = 2.0
+MIN_VOLUME_USD = 0
+MIN_MARKET_CAP_USD = 0
 TOP_N_COINS = 1000
 STATE_FILE = "previous_coins.json"
 # ===================================
 
 SCANNER_URL = "https://scanner.tradingview.com/coin/scan"
-COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc"]
+COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank", "galaxyscore"]
 
 
 def format_number(n):
@@ -28,6 +28,20 @@ def format_number(n):
     if n >= 1_000:
         return f"{n / 1_000:.2f}K"
     return f"{n:.2f}"
+
+
+def tech_rating_label(value):
+    if value is None:
+        return "N/A"
+    if value >= 0.5:
+        return "Strong Buy"
+    if value >= 0.1:
+        return "Buy"
+    if value > -0.1:
+        return "Neutral"
+    if value > -0.5:
+        return "Sell"
+    return "Strong Sell"
 
 
 def tradingview_link(name):
@@ -66,11 +80,11 @@ def get_top_coins():
 def find_high_ratio_coins(coins, threshold=RATIO_THRESHOLD):
     flagged = []
     for c in coins:
-        name, close, mcap, vol = c["d"]
+        name, close, mcap, vol, tech, altrank, galaxy = c["d"]
         if mcap and vol and mcap > 0:
             ratio = vol / mcap
             if ratio > threshold:
-                flagged.append((name, ratio, mcap, vol))
+                flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy))
     return sorted(flagged, key=lambda x: x[1], reverse=True)
 
 
@@ -91,12 +105,16 @@ def save_current_names(names):
         json.dump(sorted(names), f)
 
 
-def format_coin(name, ratio, mcap, vol, is_new=False):
+def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, is_new=False):
     link = tradingview_link(name)
     tag = "🆕 " if is_new else ""
+    tech_label = tech_rating_label(tech)
+    altrank_str = f"{altrank:.0f}" if altrank is not None else "N/A"
+    galaxy_str = f"{galaxy:.0f}" if galaxy is not None else "N/A"
     return (
         f"{tag}[{name}]({link})\n"
-        f"نسبت: {ratio:.2f} | Vol: ${format_number(vol)} | MCap: ${format_number(mcap)}"
+        f"نسبت: {ratio:.2f} | Vol: ${format_number(vol)} | MCap: ${format_number(mcap)}\n"
+        f"Tech Rating: {tech_label} | AltRank: {altrank_str} | Galaxy Score: {galaxy_str}"
     )
 
 
@@ -113,19 +131,22 @@ def run_once():
         save_current_names(set())
         return
 
-    current_names = {name for name, ratio, mcap, vol in flagged}
+    current_names = {c[0] for c in flagged}
     new_names = set() if first_run else (current_names - previous_names)
 
     new_coins = [c for c in flagged if c[0] in new_names]
     old_coins = [c for c in flagged if c[0] not in new_names]
 
-    lines = [f"*نسبت حجم به مارکت‌کپ > {RATIO_THRESHOLD} (۲۴ساعته، تجمیعی همه صرافی‌ها)*\n"f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"]
-    for name, ratio, mcap, vol in new_coins:
-        lines.append(format_coin(name, ratio, mcap, vol, is_new=True))
+    lines = [
+        f"*نسبت حجم به مارکت‌کپ > {RATIO_THRESHOLD} (۲۴ساعته، تجمیعی همه صرافی‌ها)*\n"
+        f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"
+    ]
+    for c in new_coins:
+        lines.append(format_coin(*c, is_new=True))
     if new_coins and old_coins:
         lines.append("➖➖➖➖➖➖➖➖➖➖")
-    for name, ratio, mcap, vol in old_coins:
-        lines.append(format_coin(name, ratio, mcap, vol))
+    for c in old_coins:
+        lines.append(format_coin(*c))
 
     text = "\n\n".join(lines)
     for i in range(0, len(text), 4000):
