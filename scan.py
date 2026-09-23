@@ -33,6 +33,8 @@ def format_number(n):
 def tech_rating_label(value):
     if value is None:
         return "N/A"
+    if isinstance(value, str):
+        return value
     if value >= 0.5:
         return "Strong Buy"
     if value >= 0.1:
