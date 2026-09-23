@@ -12,6 +12,7 @@ RATIO_THRESHOLD = 0.5
 MIN_VOLUME_USD = 5000000
 MIN_MARKET_CAP_USD = 50000000
 TOP_N_COINS = 1000
+INTERVAL_MINUTES = 10  # فقط برای نمایش در پیام؛ زمان‌بندی واقعی در scan.yml تنظیم می‌شه
 STATE_FILE = "previous_coins.json"
 # ===================================
 
@@ -140,9 +141,14 @@ def run_once():
     old_coins = [c for c in flagged if c[0] not in new_names]
 
     lines = [
+        f"*تنظیمات اسکن:*\n"
+        f"آستانه نسبت: {RATIO_THRESHOLD} | حداقل حجم: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
+        f"حداقل مارکت‌کپ: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
+        f"تعداد بررسی‌شده: {TOP_N_COINS} | تکرار هر {INTERVAL_MINUTES} دقیقه\n\n"
         f"*نسبت حجم به مارکت‌کپ > {RATIO_THRESHOLD} (۲۴ساعته، تجمیعی همه صرافی‌ها)*\n"
         f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"
     ]
+    
     for c in new_coins:
         lines.append(format_coin(*c, is_new=True))
     if new_coins and old_coins:
