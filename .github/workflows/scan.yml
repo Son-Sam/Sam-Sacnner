@@ -1,5 +1,5 @@
 name: Crypto Scanner
-.
+
 on:
   schedule:
     - cron: '*/10 * * * *'
