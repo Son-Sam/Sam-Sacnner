@@ -16,8 +16,7 @@ STATE_FILE = "previous_coins.json"
 # ===================================
 
 SCANNER_URL = "https://scanner.tradingview.com/coin/scan"
-COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank", "galaxyscore"]
-
+COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank", "galaxyscore", "crypto_total_rank"]
 
 def format_number(n):
     n = float(n)
@@ -82,11 +81,11 @@ def get_top_coins():
 def find_high_ratio_coins(coins, threshold=RATIO_THRESHOLD):
     flagged = []
     for c in coins:
-        name, close, mcap, vol, tech, altrank, galaxy = c["d"]
+        name, close, mcap, vol, tech, altrank, galaxy, rank = c["d"]
         if mcap and vol and mcap > 0:
             ratio = vol / mcap
             if ratio > threshold:
-                flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy))
+                flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank))
     return sorted(flagged, key=lambda x: x[1], reverse=True)
 
 
@@ -107,14 +106,15 @@ def save_current_names(names):
         json.dump(sorted(names), f)
 
 
-def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, is_new=False):
+def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, rank, is_new=False):
     link = tradingview_link(name)
     tag = "🆕 " if is_new else ""
     tech_label = tech_rating_label(tech)
     altrank_str = f"{altrank:.0f}" if altrank is not None else "N/A"
     galaxy_str = f"{galaxy:.0f}" if galaxy is not None else "N/A"
+    rank_str = f"#{rank:.0f}" if rank is not None else ""
     return (
-        f"{tag}[{name}]({link})\n"
+        f"{tag}[{name}]({link}) {rank_str}\n"
         f"نسبت: {ratio:.2f} | Vol: ${format_number(vol)} | MCap: ${format_number(mcap)}\n"
         f"Tech Rating: {tech_label} | AltRank: {altrank_str} | Galaxy Score: {galaxy_str}"
     )
