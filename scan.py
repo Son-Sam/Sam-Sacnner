@@ -12,7 +12,7 @@ RATIO_THRESHOLD = 1.0
 MIN_VOLUME_USD = 5000000
 MIN_MARKET_CAP_USD = 50000000
 TOP_N_COINS = 1000
-INTERVAL_MINUTES = 10  # فقط برای نمایش در پیام؛ زمان‌بندی واقعی در scan.yml تنظیم می‌شه
+INTERVAL_MINUTES = 30  # فقط برای نمایش در پیام؛ زمان‌بندی واقعی در scan.yml تنظیم می‌شه
 STATE_FILE = "previous_coins.json"
 # ===================================
 
