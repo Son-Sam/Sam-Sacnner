@@ -119,7 +119,7 @@ def run_once():
     new_coins = [c for c in flagged if c[0] in new_names]
     old_coins = [c for c in flagged if c[0] not in new_names]
 
-    lines = [f"*نسبت حجم به مارکت‌کپ > {RATIO_THRESHOLD} (۲۴ساعته، تجمیعی همه صرافی‌ها):*\n"]
+    lines = [f"*نسبت حجم به مارکت‌کپ > {RATIO_THRESHOLD} (۲۴ساعته، تجمیعی همه صرافی‌ها)*\n"f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"]
     for name, ratio, mcap, vol in new_coins:
         lines.append(format_coin(name, ratio, mcap, vol, is_new=True))
     if new_coins and old_coins:
