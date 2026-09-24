@@ -144,7 +144,7 @@ def run_once():
     old_coins = [c for c in flagged if c[0] not in new_names]
 
     lines = [
-        f"*VB تنظیمات اسکن:*\n"
+        f"*GitHub تنظیمات اسکن:*\n"
         f"آستانه نسبت: {RATIO_THRESHOLD} | حداقل حجم: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
         f"حداقل مارکت‌کپ: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
         f"تعداد: {TOP_N_COINS} | تکرار: {INTERVAL_MINUTES} دقیقه\n"
