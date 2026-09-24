@@ -144,8 +144,7 @@ def run_once():
         f"*github تنظیمات اسکن:*\n"
         f"آستانه نسبت: {RATIO_THRESHOLD} | حداقل حجم: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
         f"حداقل مارکت‌کپ: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
-        f"تعداد بررسی‌شده: {TOP_N_COINS} | تکرار هر {INTERVAL_MINUTES} دقیقه\n\n"
-        f"*نسبت حجم به مارکت‌کپ > {RATIO_THRESHOLD} (۲۴ساعته، تجمیعی همه صرافی‌ها)*\n"
+        f"تعداد: {TOP_N_COINS} | تکرار: {INTERVAL_MINUTES} دقیقه\n"
         f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"
     ]
     
