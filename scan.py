@@ -4,20 +4,21 @@ import json
 import os
 from datetime import datetime
 
-# ============ تنظیمات ============
+# ============ تنظیمات (اینجا تغییر بده) ============
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-RATIO_THRESHOLD = 1.0
-MIN_VOLUME_USD = 5000000
-MIN_MARKET_CAP_USD = 50000000
-TOP_N_COINS = 1000
-INTERVAL_MINUTES = 30  # فقط برای نمایش در پیام؛ زمان‌بندی واقعی در scan.yml تنظیم می‌شه
+RATIO_THRESHOLD = 0.5
+MIN_VOLUME_USD = 50000000
+MIN_MARKET_CAP_USD = 0
+TOP_N_COINS = 500
+INTERVAL_MINUTES = 30
 STATE_FILE = "previous_coins.json"
-# ===================================
+# =====================================================
 
 SCANNER_URL = "https://scanner.tradingview.com/coin/scan"
 COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank", "galaxyscore", "crypto_total_rank"]
+
 
 def format_number(n):
     n = float(n)
@@ -55,11 +56,7 @@ def tradingview_link(name):
 def fetch_batch(start, count=100):
     payload = {
         "columns": COLUMNS,
-        "filter": [
-            {"left": "market_cap_calc", "operation": "greater", "right": MIN_MARKET_CAP_USD},
-            {"left": "24h_vol_cmc", "operation": "greater", "right": MIN_VOLUME_USD},
-        ],
-        "sort": {"sortBy": "market_cap_calc", "sortOrder": "desc"},
+        "sort": {"sortBy": "crypto_total_rank", "sortOrder": "asc"},
         "markets": ["coin"],
         "range": [start, start + count],
     }
@@ -83,12 +80,18 @@ def find_high_ratio_coins(coins, threshold=RATIO_THRESHOLD):
     flagged = []
     for c in coins:
         name, close, mcap, vol, tech, altrank, galaxy, rank = c["d"]
-        if mcap and vol and mcap > 0:
-            ratio = vol / mcap
-            if ratio > threshold:
-                flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank))
+        if not mcap or not vol or mcap <= 0:
+            continue
+        if rank is not None and rank > TOP_N_COINS:
+            continue
+        if mcap < MIN_MARKET_CAP_USD:
+            continue
+        if vol < MIN_VOLUME_USD:
+            continue
+        ratio = vol / mcap
+        if ratio > threshold:
+            flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank))
     return sorted(flagged, key=lambda x: x[1], reverse=True)
-
 
 def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -141,13 +144,13 @@ def run_once():
     old_coins = [c for c in flagged if c[0] not in new_names]
 
     lines = [
-        f"*github تنظیمات اسکن:*\n"
+        f"*VB تنظیمات اسکن:*\n"
         f"آستانه نسبت: {RATIO_THRESHOLD} | حداقل حجم: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
         f"حداقل مارکت‌کپ: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
         f"تعداد: {TOP_N_COINS} | تکرار: {INTERVAL_MINUTES} دقیقه\n"
         f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"
     ]
-    
+
     for c in new_coins:
         lines.append(format_coin(*c, is_new=True))
     if new_coins and old_coins:
@@ -163,5 +166,15 @@ def run_once():
     save_current_names(current_names)
 
 
+def main():
+    while True:
+        try:
+            run_once()
+        except Exception as e:
+            print(f"خطا: {e}")
+        print(f"در حال انتظار برای {INTERVAL_MINUTES} دقیقه...\n")
+        time.sleep(INTERVAL_MINUTES * 60)
+
+
 if __name__ == "__main__":
-    run_once()
+    main()
