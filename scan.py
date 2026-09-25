@@ -18,7 +18,7 @@ STATE_FILE = "previous_coins.json"
 # =====================================================
 
 SCANNER_URL = "https://scanner.tradingview.com/coin/scan"
-COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank", "galaxyscore", "crypto_total_rank", "description"]
+COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank", "galaxyscore", "crypto_total_rank", "description", "24h_vol_to_market_cap"]
 
 
 def format_number(n):
@@ -72,6 +72,9 @@ def cryptorank_link(full_name):
 def fetch_batch(start, count=100):
     payload = {
         "columns": COLUMNS,
+        "filter": [
+            {"left": "24h_vol_to_market_cap", "operation": "greater", "right": RATIO_THRESHOLD},
+        ],
         "sort": {"sortBy": "crypto_total_rank", "sortOrder": "asc"},
         "markets": ["coin"],
         "range": [start, start + count],
@@ -95,8 +98,8 @@ def get_top_coins():
 def find_high_ratio_coins(coins, threshold=RATIO_THRESHOLD):
     flagged = []
     for c in coins:
-        name, close, mcap, vol, tech, altrank, galaxy, rank, description = c["d"]
-        if not mcap or not vol or mcap <= 0:
+        name, close, mcap, vol, tech, altrank, galaxy, rank, description, ratio = c["d"]
+        if not mcap or not vol or mcap <= 0 or ratio is None:
             continue
         if rank is not None and rank > TOP_N_COINS:
             continue
@@ -104,9 +107,7 @@ def find_high_ratio_coins(coins, threshold=RATIO_THRESHOLD):
             continue
         if vol < MIN_VOLUME_USD:
             continue
-        ratio = vol / mcap
-        if ratio > threshold:
-            flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description))
+        flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description))
     return sorted(flagged, key=lambda x: x[1], reverse=True)
 
 
