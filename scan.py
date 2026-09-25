@@ -167,9 +167,9 @@ def run_once():
 
     lines = [
         f"*GitHub تنظیمات اسکن:*\n"
-        f"min v/cap: {RATIO_THRESHOLD} | min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
-        f"min cap: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
-        f"تعداد: {TOP_N_COINS} | تکرار: {INTERVAL_MINUTES} m\n"
+        f"min v/cap: {RATIO_THRESHOLD} | min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0}\n"
+        f"min cap: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | " 
+        f"top: {TOP_N_COINS} | interval m: {INTERVAL_MINUTES}\n"
         f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"
     ]
 
