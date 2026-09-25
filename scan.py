@@ -140,7 +140,7 @@ def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, rank, description
     cr_str = f"[CR]({cryptorank_link(description)})" if description else ""
 
     return (
-        f"{tag}[{name}]({link}) {rank_str} {cmc_str} {cr_str} vol/mktcap: {ratio:.2f}\n"
+        f"{tag}[{name}]({link}) {rank_str} {cmc_str} {cr_str} v/cap: {ratio:.2f}\n"
         f"Vol: ${format_number(vol)} | MCap: ${format_number(mcap)}\n"
         f"T Rating: {tech_label} | AltRank: {altrank_str} | G Score: {galaxy_str}"
     )
@@ -167,7 +167,7 @@ def run_once():
 
     lines = [
         f"*GitHub تنظیمات اسکن:*\n"
-        f"آستانه نسبت: {RATIO_THRESHOLD} | حداقل حجم: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
+        f"min v/cap: {RATIO_THRESHOLD} | حداقل حجم: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
         f"حداقل مارکت‌کپ: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
         f"تعداد: {TOP_N_COINS} | تکرار: {INTERVAL_MINUTES} دقیقه\n"
         f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"
