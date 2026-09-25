@@ -2,6 +2,7 @@ import requests
 import time
 import json
 import os
+import re
 from datetime import datetime
 
 # ============ تنظیمات (اینجا تغییر بده) ============
@@ -17,7 +18,7 @@ STATE_FILE = "previous_coins.json"
 # =====================================================
 
 SCANNER_URL = "https://scanner.tradingview.com/coin/scan"
-COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank", "galaxyscore", "crypto_total_rank"]
+COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank", "galaxyscore", "crypto_total_rank", "description"]
 
 
 def format_number(n):
@@ -53,6 +54,21 @@ def tradingview_link(name):
     return f"https://www.tradingview.com/chart/?symbol={symbol}"
 
 
+def slugify(full_name):
+    slug = full_name.lower().strip()
+    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+    slug = re.sub(r"\s+", "-", slug)
+    return slug
+
+
+def coinmarketcap_link(full_name):
+    return f"https://coinmarketcap.com/currencies/{slugify(full_name)}/"
+
+
+def cryptorank_link(full_name):
+    return f"https://cryptorank.io/price/{slugify(full_name)}"
+
+
 def fetch_batch(start, count=100):
     payload = {
         "columns": COLUMNS,
@@ -79,7 +95,7 @@ def get_top_coins():
 def find_high_ratio_coins(coins, threshold=RATIO_THRESHOLD):
     flagged = []
     for c in coins:
-        name, close, mcap, vol, tech, altrank, galaxy, rank = c["d"]
+        name, close, mcap, vol, tech, altrank, galaxy, rank, description = c["d"]
         if not mcap or not vol or mcap <= 0:
             continue
         if rank is not None and rank > TOP_N_COINS:
@@ -90,8 +106,9 @@ def find_high_ratio_coins(coins, threshold=RATIO_THRESHOLD):
             continue
         ratio = vol / mcap
         if ratio > threshold:
-            flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank))
+            flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description))
     return sorted(flagged, key=lambda x: x[1], reverse=True)
+
 
 def send_telegram_message(text):
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -110,15 +127,19 @@ def save_current_names(names):
         json.dump(sorted(names), f)
 
 
-def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, rank, is_new=False):
+def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, is_new=False):
     link = tradingview_link(name)
     tag = "🆕 " if is_new else ""
     tech_label = tech_rating_label(tech)
     altrank_str = f"{altrank:.0f}" if altrank is not None else "N/A"
     galaxy_str = f"{galaxy:.0f}" if galaxy is not None else "N/A"
     rank_str = f"#{rank:.0f}" if rank is not None else ""
+
+    cmc_str = f"[CMC]({coinmarketcap_link(description)})" if description else ""
+    cr_str = f"[CR]({cryptorank_link(description)})" if description else ""
+
     return (
-        f"{tag}[{name}]({link}) {rank_str} vol/mktcap: {ratio:.2f}\n"
+        f"{tag}[{name}]({link}) {rank_str} {cmc_str} {cr_str} vol/mktcap: {ratio:.2f}\n"
         f"Vol: ${format_number(vol)} | MCap: ${format_number(mcap)}\n"
         f"T Rating: {tech_label} | AltRank: {altrank_str} | G Score: {galaxy_str}"
     )
