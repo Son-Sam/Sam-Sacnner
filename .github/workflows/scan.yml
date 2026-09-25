@@ -1,4 +1,4 @@
-name: Crypto Scanner
+name: Sam Scanner
 
 on:
   schedule:
