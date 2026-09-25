@@ -116,6 +116,19 @@ def send_telegram_message(text):
     requests.post(url, data={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "Markdown"})
 
 
+def send_in_chunks(all_lines, max_len=3800):
+    chunk = ""
+    for block in all_lines:
+        candidate = (chunk + "\n\n" + block) if chunk else block
+        if len(candidate) > max_len:
+            send_telegram_message(chunk)
+            chunk = block
+        else:
+            chunk = candidate
+    if chunk:
+        send_telegram_message(chunk)
+
+
 def load_previous_names():
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, "r") as f:
@@ -168,7 +181,7 @@ def run_once():
     lines = [
         f"*GitHub تنظیمات اسکن:*\n"
         f"min v/cap: {RATIO_THRESHOLD} | min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0}\n"
-        f"min cap: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | " 
+        f"min cap: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
         f"top: {TOP_N_COINS} | interval m: {INTERVAL_MINUTES}\n"
         f"تعداد کوین‌های یافت‌شده: {len(flagged)} ({len(new_coins)} جدید)\n"
     ]
@@ -180,9 +193,7 @@ def run_once():
     for c in old_coins:
         lines.append(format_coin(*c))
 
-    text = "\n\n".join(lines)
-    for i in range(0, len(text), 4000):
-        send_telegram_message(text[i:i + 4000])
+    send_in_chunks(lines)
 
     print(f"{len(flagged)} کوین پیدا شد ({len(new_coins)} جدید) و به تلگرام ارسال شد.")
     save_current_names(current_names)
