@@ -213,7 +213,7 @@ def build_section(title, flagged, previous_names):
 def build_header():
     return (
         f"*GitHub تنظیمات اسکن:*\n"
-        f"min v/cap: {RATIO_THRESHOLD} | min vΔ: {VOL_CHANGE_THRESHOLD_PCT}% | min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0}\n"
+        f"min v/cap: {RATIO_THRESHOLD} | min vΔ24h: {VOL_CHANGE_THRESHOLD_PCT}% | min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0}\n"
         f"min cap: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
         f"top: {TOP_N_COINS} | interval m: {INTERVAL_MINUTES}\n"
     )
@@ -236,23 +236,23 @@ def run_once():
         save_state(set(), set())
         return
 
-    header = build_header()
     ratio_names = set()
     change_names = set()
-    header_sent = False
 
-    # پیام ۱: نسبت حجم به مارکت‌کپ
+    # پیام ۱: هدر تنظیمات
+    send_telegram_message(build_header())
+
+    # پیام ۲: نسبت حجم به مارکت‌کپ
     if flagged_ratio:
         section, ratio_names = build_section(f"📊 vol/mktcap > {RATIO_THRESHOLD}", flagged_ratio, prev_ratio)
-        send_in_chunks([header] + section)
-        header_sent = True
+        send_in_chunks(section)
 
-    # پیام ۲: تغییر حجم ۲۴ساعته
+    # پیام ۳: تغییر حجم ۲۴ساعته
     if flagged_change:
         section, change_names = build_section(
-            f"📈 تغییر حجم ۲۴ساعته > {VOL_CHANGE_THRESHOLD_PCT}%", flagged_change, prev_change
+            f"📈 VΔ24h > {VOL_CHANGE_THRESHOLD_PCT}%", flagged_change, prev_change
         )
-        send_in_chunks(([] if header_sent else [header]) + section)
+        send_in_chunks(section)
 
     print(f"ارسال شد: {len(flagged_ratio)} کوین (نسبت) | {len(flagged_change)} کوین (تغییر حجم)")
     save_state(ratio_names, change_names)
