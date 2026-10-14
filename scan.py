@@ -11,6 +11,7 @@ TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 RATIO_THRESHOLD = 0.5             # آستانه vol/mktcap
 VOL_CHANGE_THRESHOLD_PCT = 300    # آستانه تغییر حجم ۲۴ساعته (درصد)
+MAX_PCT_ABOVE_LOW_1M = 30         # حداکثر درصد بالاتر بودن قیمت از کف یک‌ماهه
 MIN_VOLUME_USD = 50000000
 MIN_MARKET_CAP_USD = 0
 TOP_N_COINS = 500
@@ -21,7 +22,7 @@ STATE_FILE = "previous_coins.json"
 SCANNER_URL = "https://scanner.tradingview.com/coin/scan"
 COLUMNS = ["name", "close", "market_cap_calc", "24h_vol_cmc", "TechRating_1D", "altrank",
            "galaxyscore", "crypto_total_rank", "description", "24h_vol_to_market_cap",
-           "24h_vol_change_cmc"]
+           "24h_vol_change_cmc", "low|1M"]
 
 
 def format_number(n):
@@ -96,7 +97,7 @@ def get_coins(extra_filter):
     return results
 
 
-def passes_common_filters(mcap, vol, rank):
+def passes_common_filters(mcap, vol, rank, close, low_1m):
     if not mcap or not vol or mcap <= 0:
         return False
     if rank is not None and rank > TOP_N_COINS:
@@ -105,16 +106,20 @@ def passes_common_filters(mcap, vol, rank):
         return False
     if vol < MIN_VOLUME_USD:
         return False
+    if close is not None and low_1m is not None and low_1m > 0:
+        pct_above_low = (close - low_1m) / low_1m * 100
+        if pct_above_low > MAX_PCT_ABOVE_LOW_1M:
+            return False
     return True
 
 
 def find_high_ratio_coins(coins):
     flagged = []
     for c in coins:
-        name, close, mcap, vol, tech, altrank, galaxy, rank, description, ratio, vol_change = c["d"]
+        name, close, mcap, vol, tech, altrank, galaxy, rank, description, ratio, vol_change, low_1m = c["d"]
         if ratio is None or ratio <= RATIO_THRESHOLD:
             continue
-        if not passes_common_filters(mcap, vol, rank):
+        if not passes_common_filters(mcap, vol, rank, close, low_1m):
             continue
         flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, vol_change))
     return sorted(flagged, key=lambda x: x[1], reverse=True)
@@ -123,10 +128,10 @@ def find_high_ratio_coins(coins):
 def find_vol_change_coins(coins):
     flagged = []
     for c in coins:
-        name, close, mcap, vol, tech, altrank, galaxy, rank, description, ratio, vol_change = c["d"]
+        name, close, mcap, vol, tech, altrank, galaxy, rank, description, ratio, vol_change, low_1m = c["d"]
         if vol_change is None or vol_change <= VOL_CHANGE_THRESHOLD_PCT:
             continue
-        if not passes_common_filters(mcap, vol, rank):
+        if not passes_common_filters(mcap, vol, rank, close, low_1m):
             continue
         flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, vol_change))
     return sorted(flagged, key=lambda x: x[9], reverse=True)
@@ -213,7 +218,8 @@ def build_section(title, flagged, previous_names):
 def build_header():
     return (
         f"*GitHub تنظیمات اسکن:*\n"
-        f"min v/cap: {RATIO_THRESHOLD} | min vΔ24h: {VOL_CHANGE_THRESHOLD_PCT}% | min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0}\n"
+        f"min v/cap: {RATIO_THRESHOLD} | min vΔ24h: {VOL_CHANGE_THRESHOLD_PCT}% | max %above low1M: {MAX_PCT_ABOVE_LOW_1M}%\n"
+        f"min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
         f"min cap: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
         f"top: {TOP_N_COINS} | interval m: {INTERVAL_MINUTES}\n"
     )
