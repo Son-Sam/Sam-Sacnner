@@ -97,7 +97,13 @@ def get_coins(extra_filter):
     return results
 
 
-def passes_common_filters(mcap, vol, rank, close, low_1m):
+def calc_pct_above_low(close, low_1m):
+    if close is None or low_1m is None or low_1m <= 0:
+        return None
+    return (close - low_1m) / low_1m * 100
+
+
+def passes_common_filters(mcap, vol, rank, pct_above_low):
     if not mcap or not vol or mcap <= 0:
         return False
     if rank is not None and rank > TOP_N_COINS:
@@ -106,10 +112,8 @@ def passes_common_filters(mcap, vol, rank, close, low_1m):
         return False
     if vol < MIN_VOLUME_USD:
         return False
-    if close is not None and low_1m is not None and low_1m > 0:
-        pct_above_low = (close - low_1m) / low_1m * 100
-        if pct_above_low > MAX_PCT_ABOVE_LOW_1M:
-            return False
+    if pct_above_low is not None and pct_above_low > MAX_PCT_ABOVE_LOW_1M:
+        return False
     return True
 
 
@@ -119,9 +123,10 @@ def find_high_ratio_coins(coins):
         name, close, mcap, vol, tech, altrank, galaxy, rank, description, ratio, vol_change, low_1m = c["d"]
         if ratio is None or ratio <= RATIO_THRESHOLD:
             continue
-        if not passes_common_filters(mcap, vol, rank, close, low_1m):
+        pct_above_low = calc_pct_above_low(close, low_1m)
+        if not passes_common_filters(mcap, vol, rank, pct_above_low):
             continue
-        flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, vol_change))
+        flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, vol_change, pct_above_low))
     return sorted(flagged, key=lambda x: x[1], reverse=True)
 
 
@@ -131,9 +136,10 @@ def find_vol_change_coins(coins):
         name, close, mcap, vol, tech, altrank, galaxy, rank, description, ratio, vol_change, low_1m = c["d"]
         if vol_change is None or vol_change <= VOL_CHANGE_THRESHOLD_PCT:
             continue
-        if not passes_common_filters(mcap, vol, rank, close, low_1m):
+        pct_above_low = calc_pct_above_low(close, low_1m)
+        if not passes_common_filters(mcap, vol, rank, pct_above_low):
             continue
-        flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, vol_change))
+        flagged.append((name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, vol_change, pct_above_low))
     return sorted(flagged, key=lambda x: x[9], reverse=True)
 
 
@@ -175,7 +181,7 @@ def save_state(ratio_names, change_names):
         json.dump({"ratio": sorted(ratio_names), "change": sorted(change_names)}, f)
 
 
-def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, vol_change, is_new=False):
+def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, rank, description, vol_change, pct_above_low, is_new=False):
     link = tradingview_link(name)
     tag = "🆕 " if is_new else ""
     tech_label = tech_rating_label(tech)
@@ -184,14 +190,15 @@ def format_coin(name, ratio, mcap, vol, tech, altrank, galaxy, rank, description
     rank_str = f"#{rank:.0f}" if rank is not None else ""
     ratio_str = f"{ratio:.2f}" if ratio is not None else "N/A"
     change_str = f"{vol_change:+.0f}%" if vol_change is not None else "N/A"
+    pct_low_str = f"{pct_above_low:+.0f}%" if pct_above_low is not None else "N/A"
 
     cmc_str = f"[CMC]({coinmarketcap_link(description)})" if description else ""
     cr_str = f"[CR]({cryptorank_link(description)})" if description else ""
 
     return (
         f"{tag}[{name}]({link}) {rank_str} {cmc_str} {cr_str}\n"
-        f"v/cap: {ratio_str} | vΔ24h: {change_str}\n"
-        f"Vol: ${format_number(vol)} | MCap: ${format_number(mcap)}\n"
+        f"v/cap: {ratio_str} | vΔ24h: {change_str} | Vol: ${format_number(vol)}\n"
+        f"MCap: ${format_number(mcap)} | P%toLow1M: {pct_low_str}\n"
         f"T Rating: {tech_label} | AltRank: {altrank_str} | G Score: {galaxy_str}"
     )
 
@@ -218,8 +225,8 @@ def build_section(title, flagged, previous_names):
 def build_header():
     return (
         f"*GitHub تنظیمات اسکن:*\n"
-        f"min v/cap: {RATIO_THRESHOLD} | min vΔ24h: {VOL_CHANGE_THRESHOLD_PCT}% | max %above low1M: {MAX_PCT_ABOVE_LOW_1M}%\n"
-        f"min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0} | "
+        f"min v/cap: {RATIO_THRESHOLD} | min vΔ24h: {VOL_CHANGE_THRESHOLD_PCT}%\n"
+        f"maxP%above low1M: {MAX_PCT_ABOVE_LOW_1M}% | min v: ${format_number(MIN_VOLUME_USD) if MIN_VOLUME_USD else 0}\n"
         f"min cap: ${format_number(MIN_MARKET_CAP_USD) if MIN_MARKET_CAP_USD else 0} | "
         f"top: {TOP_N_COINS} | interval m: {INTERVAL_MINUTES}\n"
     )
